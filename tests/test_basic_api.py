@@ -15,6 +15,18 @@ def get_task_by_id(tasks, task_id):
     return tasks[get_task_index_by_id(tasks, task_id)]
 
 
+class DummyException(Exception):
+    pass
+
+
+class DummyExceptionSubclass(DummyException):
+    pass
+
+
+class DummyExceptionOtherSubclass(DummyException):
+    pass
+
+
 class ApiTestCase(unittest.TestCase):
     def setUp(self):
         app = Flask(__name__)
@@ -129,7 +141,7 @@ class URLTestCase(unittest.TestCase):
             return self.tasks
 
         def get_task(request, task_id):
-            return get_task_by_id(self.tasks, id)
+            return get_task_by_id(self.tasks, task_id)
 
         api_201409 = Api(version="v201409")
         all_task_endpoint = ApiEndpoint(
@@ -200,7 +212,7 @@ class HTTPMethodsTestCase(unittest.TestCase):
         def delete_task(request, task_id):
             index = get_task_index_by_id(self.tasks, task_id)
             task = self.tasks.pop(index)
-            return task, 200
+            return task
 
         api_201409 = Api(version="v201409")
         api_201409.register_endpoint(ApiEndpoint(
@@ -333,7 +345,51 @@ class HTTPStatusCodeSTestCase(unittest.TestCase):
 
 
 class ExceptionsTestCase(unittest.TestCase):
-    pass
+    def setUp(self):
+        app = Flask(__name__)
+
+        def raises_dummy_exception(request):
+            exc_type = request.args.get('exc_type')
+
+            if exc_type == 'subclass':
+                raise DummyExceptionSubclass()
+            elif exc_type == 'other-subclass':
+                raise DummyExceptionOtherSubclass()
+
+            raise DummyException()
+
+        api_201409 = Api(version="v201409")
+        api_201409.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/dummy-exception",
+            handler=raises_dummy_exception,
+            exceptions=[
+                (DummyExceptionOtherSubclass, 409),
+                (DummyExceptionSubclass, 406),
+                (DummyException, 400)
+            ]
+        ))
+
+        app.register_blueprint(api_201409)
+
+        app.config['TESTING'] = True
+        self.app = app.test_client()
+
+    def test_different_exceptions_with_different_codes(self):
+        resp = self.app.get(
+            '/v201409/dummy-exception?exc_type=subclass',
+            content_type='application/json')
+        self.assertEqual(resp.status_code, 406)
+
+        resp = self.app.get(
+            '/v201409/dummy-exception?exc_type=other-subclass',
+            content_type='application/json')
+        self.assertEqual(resp.status_code, 409)
+
+        resp = self.app.get(
+            '/v201409/dummy-exception',
+            content_type='application/json')
+        self.assertEqual(resp.status_code, 400)
 
 
 class ExtraHeadersTestCase(unittest.TestCase):

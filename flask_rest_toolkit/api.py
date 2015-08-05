@@ -17,7 +17,13 @@ class ViewHandler(object):
         self.endpoint = endpoint
 
     def __call__(self, *args, **kwargs):
-        output = self.endpoint.handler(request, *args, **kwargs)
+        try:
+            output = self.endpoint.handler(request, *args, **kwargs)
+        except Exception as exc:
+            for exc_class, status_code in self.endpoint.exceptions:
+                if exc_class == exc.__class__:
+                    return make_response("", status_code)
+            raise exc
 
         if isinstance(output, ResponseBase):
             return output
@@ -52,9 +58,13 @@ class Api(Blueprint):
         if not isinstance(endpoint.http_method, (list, tuple)):
             methods = [endpoint.http_method]
 
+        view_name = "{path}-{view}".format(
+            path=url, view=endpoint.handler.__name__
+        )
+
         self.add_url_rule(
             url,
-            endpoint.handler.__name__,
+            view_name,
             ViewHandler(endpoint=endpoint),
             methods=methods
         )
