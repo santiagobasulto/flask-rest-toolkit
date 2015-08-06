@@ -17,6 +17,8 @@ class ViewHandler(object):
         self.endpoint = endpoint
 
     def __call__(self, *args, **kwargs):
+        if self.endpoint.authentication:
+            self.endpoint.authentication.authenticate(request)
         try:
             output = self.endpoint.handler(request, *args, **kwargs)
         except Exception as exc:
