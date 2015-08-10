@@ -23,6 +23,11 @@ class AuthenticationStrategy(object):
         return NotImplementedError()
 
 
+class NoAuthenticationStrategy(object):
+    def authenticate(self, request):
+        return None
+
+
 class NoAuthorizationStrategy(object):
     def authorize(self, request):
         return None
@@ -38,3 +43,14 @@ class BasicAuth(AuthenticationStrategy, NoAuthorizationStrategy):
             request.authorization.get('password'))
         if not valid_user:
             raise Unauthorized()
+
+
+class And(AuthenticationStrategy):
+    def __init__(self, *auth_strategies):
+        self.auth_stratgies = auth_strategies
+
+    def authenticate(self, request):
+        [auth.authenticate(request) for auth in self.auth_stratgies]
+
+    def authorize(self, request):
+        [auth.authorize(request) for auth in self.auth_stratgies]

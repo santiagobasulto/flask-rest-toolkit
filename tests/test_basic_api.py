@@ -79,11 +79,6 @@ class ApiTestCase(unittest.TestCase):
             data=json.dumps({'task': 'New Task!'}))
         self.assertEqual(resp.status_code, 201)
 
-        # data = json.loads(resp.get_data())
-        # self.assertEqual(len(data), 2)
-
-        # self.assertEqual(resp.headers['Content-Type'], 'application/json')
-
         resp = self.app.get('/v201409/task/', content_type='application/json')
         self.assertEqual(resp.status_code, 200)
 

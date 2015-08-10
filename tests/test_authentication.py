@@ -8,12 +8,14 @@ from werkzeug.exceptions import Unauthorized
 
 from flask_rest_toolkit.api import Api
 from flask_rest_toolkit.endpoint import ApiEndpoint
-from flask_rest_toolkit.auth import BasicAuth
+from flask_rest_toolkit.auth import (
+    BasicAuth, And, NoAuthorizationStrategy,
+    AuthenticationStrategy)
 
 from unittest import mock
 
 
-class UnitAuthTestCase(unittest.TestCase):
+class BasicAuthUnitTestCase(unittest.TestCase):
     def test_authorization_raises_exception_if_user_is_not_valid(self):
         "Should raise an Unauthorized exception if is_valid_user function returns False"
         is_valid_mock = mock.MagicMock(return_value=False)
@@ -50,6 +52,60 @@ class UnitAuthTestCase(unittest.TestCase):
         self.assertEqual(result, None)
 
         is_valid_mock.assert_called_once_with('john', 'xxx')
+
+
+class DummyAuthentication(AuthenticationStrategy, NoAuthorizationStrategy):
+    def __init__(self, valid_auth):
+        self.valid_auth = valid_auth
+
+    def authenticate(self, request):
+        if not self.valid_auth:
+            raise Unauthorized()
+
+
+class AndAuthUnitTestCase(unittest.TestCase):
+    def test_valid_authentication(self):
+        is_valid_mock = mock.MagicMock(return_value=True)
+
+        builder = EnvironBuilder()
+        request = Request(builder.get_environ())
+        request.authorization = {'username': 'john', 'password': 'xxx'}
+
+        dummy = DummyAuthentication(valid_auth=True)
+        dummy_auth_mock = mock.MagicMock(return_value=True)
+        dummy.authenticate = dummy_auth_mock
+        auth = And(
+            BasicAuth(is_valid_user=is_valid_mock),
+            dummy
+        )
+
+        result = auth.authenticate(request)
+        self.assertEqual(result, None)
+
+        is_valid_mock.assert_called_once_with('john', 'xxx')
+        dummy_auth_mock.assert_called_once_with(request)
+
+    def test_not_valid_authentication_second_auth_not_invoked(self):
+        "Should raise an Unthorized exception and avoid invoking other auth strategies"
+        is_valid_mock = mock.MagicMock(return_value=False)
+
+        builder = EnvironBuilder()
+        request = Request(builder.get_environ())
+        request.authorization = {'username': 'john', 'password': 'xxx'}
+
+        dummy = DummyAuthentication(valid_auth=True)
+        dummy_auth_mock = mock.MagicMock(return_value=True)
+        dummy.authenticate = dummy_auth_mock
+        auth = And(
+            BasicAuth(is_valid_user=is_valid_mock),
+            dummy
+        )
+
+        with self.assertRaises(Unauthorized):
+            auth.authenticate(request)
+
+        is_valid_mock.assert_called_once_with('john', 'xxx')
+        self.assertEqual(dummy_auth_mock.call_count, 0)
 
 
 class BasicAuthTestCase(unittest.TestCase):
