@@ -1,3 +1,6 @@
+from werkzeug.exceptions import Unauthorized
+
+
 class AuthenticatedException(Exception):
     pass
 
@@ -23,8 +26,6 @@ class AuthenticationStrategy(object):
 class NoAuthorizationStrategy(object):
     def authorize(self, request):
         return None
-
-from werkzeug.exceptions import Unauthorized
 
 
 class BasicAuth(AuthenticationStrategy, NoAuthorizationStrategy):
