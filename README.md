@@ -1,6 +1,8 @@
-# Work in progress
+# Flask Rest Toolkit
 
-TODO...
+A set of tools to create simple Flask REST web services and APIs.
+
+**Work in progress. Everything is subject to changes**
 
 # Run tests
 
