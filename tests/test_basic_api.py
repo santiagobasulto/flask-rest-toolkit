@@ -43,7 +43,7 @@ class ApiTestCase(unittest.TestCase):
             tasks.append({'task': data['task']})
             return {}, 201
 
-        api_201409 = Api(version="v201409")
+        api_201409 = Api(version="v1")
         task_endpoint = ApiEndpoint(
             http_method="GET",
             endpoint="/task/",
@@ -64,7 +64,7 @@ class ApiTestCase(unittest.TestCase):
         self.app = app.test_client()
 
     def test_simple_versioning_and_GET(self):
-        resp = self.app.get('/v201409/task/', content_type='application/json')
+        resp = self.app.get('/v1/task/', content_type='application/json')
         self.assertEqual(resp.status_code, 200)
 
         data = json.loads(resp.data.decode(resp.charset))
@@ -74,12 +74,12 @@ class ApiTestCase(unittest.TestCase):
 
     def test_simple_POST(self):
         resp = self.app.post(
-            '/v201409/task/',
+            '/v1/task/',
             content_type='application/json',
             data=json.dumps({'task': 'New Task!'}))
         self.assertEqual(resp.status_code, 201)
 
-        resp = self.app.get('/v201409/task/', content_type='application/json')
+        resp = self.app.get('/v1/task/', content_type='application/json')
         self.assertEqual(resp.status_code, 200)
 
         data = json.loads(resp.data.decode(resp.charset))
@@ -99,8 +99,8 @@ class VersioningTestCase(unittest.TestCase):
         def get_task(request):
             return tasks
 
-        api_201409 = Api(version="v201409")
-        api_201507 = Api(version="v201507")
+        api_201409 = Api(version="v1")
+        api_201507 = Api(version="v2")
         task_endpoint = ApiEndpoint(
             http_method="GET",
             endpoint="/task/",
@@ -116,10 +116,10 @@ class VersioningTestCase(unittest.TestCase):
         self.app = app.test_client()
 
     def test_versions(self):
-        resp = self.app.get('/v201409/task/', content_type='application/json')
+        resp = self.app.get('/v1/task/', content_type='application/json')
         self.assertEqual(resp.status_code, 200)
 
-        resp = self.app.get('/v201507/task/', content_type='application/json')
+        resp = self.app.get('/v2/task/', content_type='application/json')
         self.assertEqual(resp.status_code, 200)
 
 
@@ -138,7 +138,7 @@ class URLTestCase(unittest.TestCase):
         def get_task(request, task_id):
             return get_task_by_id(self.tasks, task_id)
 
-        api_201409 = Api(version="v201409")
+        api_201409 = Api(version="v1")
         all_task_endpoint = ApiEndpoint(
             http_method="GET",
             endpoint="/task/",
@@ -158,7 +158,7 @@ class URLTestCase(unittest.TestCase):
         self.app = app.test_client()
 
     def test_get_task_by_id(self):
-        resp = self.app.get('/v201409/task/2/', content_type='application/json')
+        resp = self.app.get('/v1/task/2/', content_type='application/json')
         self.assertEqual(resp.status_code, 200)
 
         data = json.loads(resp.data.decode(resp.charset))
@@ -168,7 +168,7 @@ class URLTestCase(unittest.TestCase):
         self.assertEqual(data['id'], 2)
 
     def test_get_all_tasks(self):
-        resp = self.app.get('/v201409/task/', content_type='application/json')
+        resp = self.app.get('/v1/task/', content_type='application/json')
         self.assertEqual(resp.status_code, 200)
 
         data = json.loads(resp.data.decode(resp.charset))
@@ -209,7 +209,7 @@ class HTTPMethodsTestCase(unittest.TestCase):
             task = self.tasks.pop(index)
             return task
 
-        api_201409 = Api(version="v201409")
+        api_201409 = Api(version="v1")
         api_201409.register_endpoint(ApiEndpoint(
             http_method="GET",
             endpoint="/task/",
@@ -242,7 +242,7 @@ class HTTPMethodsTestCase(unittest.TestCase):
         self.app = app.test_client()
 
     def test_get(self):
-        resp = self.app.get('/v201409/task/', content_type='application/json')
+        resp = self.app.get('/v1/task/', content_type='application/json')
         self.assertEqual(resp.status_code, 200)
 
         data = json.loads(resp.data.decode(resp.charset))
@@ -250,7 +250,7 @@ class HTTPMethodsTestCase(unittest.TestCase):
 
     def test_post(self):
         resp = self.app.post(
-            '/v201409/task/',
+            '/v1/task/',
             content_type='application/json',
             data=json.dumps({'task': 'New Task!'}))
         self.assertEqual(resp.status_code, 201)
@@ -261,7 +261,7 @@ class HTTPMethodsTestCase(unittest.TestCase):
         tasks = self.tasks.copy()
 
         resp = self.app.put(
-            '/v201409/task/2/', content_type='application/json',
+            '/v1/task/2/', content_type='application/json',
             data=json.dumps({'id': 99, 'task': 'Updated Task'}))
         self.assertEqual(resp.status_code, 204)
 
@@ -273,7 +273,7 @@ class HTTPMethodsTestCase(unittest.TestCase):
         tasks = self.tasks.copy()
 
         resp = self.app.patch(
-            '/v201409/task/2/', content_type='application/json',
+            '/v1/task/2/', content_type='application/json',
             data=json.dumps({'task': 'Updated Task'}))
         self.assertEqual(resp.status_code, 204)
 
@@ -284,7 +284,7 @@ class HTTPMethodsTestCase(unittest.TestCase):
         tasks, deleted_task = self.tasks.copy()[:1], self.tasks.copy()[-1]
 
         resp = self.app.delete(
-            '/v201409/task/2/', content_type='application/json')
+            '/v1/task/2/', content_type='application/json')
 
         self.assertEqual(resp.status_code, 200)
 
@@ -308,7 +308,7 @@ class HTTPStatusCodeSTestCase(unittest.TestCase):
         def conflict_handler(request):
             return {'task': 'Conflicted Task'}, 409
 
-        api_201409 = Api(version="v201409")
+        api_201409 = Api(version="v1")
         api_201409.register_endpoint(ApiEndpoint(
             http_method=["GET", "POST"],
             endpoint="/",
@@ -326,14 +326,14 @@ class HTTPStatusCodeSTestCase(unittest.TestCase):
         self.app = app.test_client()
 
     def test_different_success_codes(self):
-        resp = self.app.get('/v201409/', content_type='application/json')
+        resp = self.app.get('/v1/', content_type='application/json')
         self.assertEqual(resp.status_code, 200)
 
-        resp = self.app.post('/v201409/', content_type='application/json')
+        resp = self.app.post('/v1/', content_type='application/json')
         self.assertEqual(resp.status_code, 201)
 
     def test_conflict_code(self):
-        resp = self.app.get('/v201409/conflict', content_type='application/json')
+        resp = self.app.get('/v1/conflict', content_type='application/json')
         self.assertEqual(resp.status_code, 409)
         data = json.loads(resp.data.decode(resp.charset))
         self.assertEqual(data['task'], 'Conflicted Task')
@@ -353,7 +353,7 @@ class ExceptionsTestCase(unittest.TestCase):
 
             raise DummyException()
 
-        api_201409 = Api(version="v201409")
+        api_201409 = Api(version="v1")
         api_201409.register_endpoint(ApiEndpoint(
             http_method="GET",
             endpoint="/dummy-exception",
@@ -372,17 +372,17 @@ class ExceptionsTestCase(unittest.TestCase):
 
     def test_different_exceptions_with_different_codes(self):
         resp = self.app.get(
-            '/v201409/dummy-exception?exc_type=subclass',
+            '/v1/dummy-exception?exc_type=subclass',
             content_type='application/json')
         self.assertEqual(resp.status_code, 406)
 
         resp = self.app.get(
-            '/v201409/dummy-exception?exc_type=other-subclass',
+            '/v1/dummy-exception?exc_type=other-subclass',
             content_type='application/json')
         self.assertEqual(resp.status_code, 409)
 
         resp = self.app.get(
-            '/v201409/dummy-exception',
+            '/v1/dummy-exception',
             content_type='application/json')
         self.assertEqual(resp.status_code, 400)
 

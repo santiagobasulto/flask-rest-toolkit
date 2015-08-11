@@ -111,7 +111,7 @@ class AndAuthUnitTestCase(unittest.TestCase):
 class BasicAuthTestCase(unittest.TestCase):
     def setUp(self):
         app = Flask(__name__)
-        self.username = "testing@payability.com"
+        self.username = "testing@example.com"
         self.password = "ShowMeTheMoney"
 
         def is_valid_user(username, password):
@@ -125,7 +125,7 @@ class BasicAuthTestCase(unittest.TestCase):
         def get_tasks(request):
             return self.tasks
 
-        api_201409 = Api(version="v201409")
+        api_201409 = Api(version="v1")
         api_201409.register_endpoint(ApiEndpoint(
             http_method="GET",
             endpoint="/task/basic",
@@ -140,7 +140,7 @@ class BasicAuthTestCase(unittest.TestCase):
 
     def test_basic_auth_not_authenticated(self):
         resp = self.app.get(
-            '/v201409/task/basic',
+            '/v1/task/basic',
             content_type='application/json')
         self.assertEqual(resp.status_code, 401)
 
@@ -148,7 +148,7 @@ class BasicAuthTestCase(unittest.TestCase):
         auth_str = "{username}:{password}".format(
             username=self.username, password=self.password).encode('ascii')
         resp = self.app.get(
-            '/v201409/task/basic',
+            '/v1/task/basic',
             content_type='application/json',
             headers={
                 'Authorization': b'Basic ' + base64.b64encode(auth_str)
@@ -163,7 +163,7 @@ class BasicAuthTestCase(unittest.TestCase):
         auth_str = "{username}:{password}".format(
             username="XXX", password="OOO").encode('ascii')
         resp = self.app.get(
-            '/v201409/task/basic',
+            '/v1/task/basic',
             content_type='application/json',
             headers={
                 'Authorization': b'Basic ' + base64.b64encode(auth_str)
