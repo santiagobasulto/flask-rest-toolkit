@@ -1,5 +1,6 @@
 import json
 import unittest
+import mock
 
 from flask import Flask
 
@@ -90,14 +91,16 @@ class ApiTestCase(unittest.TestCase):
 
 class VersioningTestCase(unittest.TestCase):
     def setUp(self):
-        app = Flask(__name__)
-        tasks = [
+        self.tasks = [
             {'id': 1, 'task': 'Do the laundry'},
             {'id': 2, 'task': 'Do the dishes'},
         ]
 
+    def test_versions_with_same_endpoints(self):
+        app = Flask(__name__)
+
         def get_task(request):
-            return tasks
+            return self.tasks
 
         api_201409 = Api(version="v1")
         api_201507 = Api(version="v2")
@@ -115,12 +118,123 @@ class VersioningTestCase(unittest.TestCase):
         app.config['TESTING'] = True
         self.app = app.test_client()
 
-    def test_versions(self):
         resp = self.app.get('/v1/task/', content_type='application/json')
         self.assertEqual(resp.status_code, 200)
 
         resp = self.app.get('/v2/task/', content_type='application/json')
         self.assertEqual(resp.status_code, 200)
+
+    def test_versions_with_different_endpoints_same_url(self):
+        app = Flask(__name__)
+
+        get_tasks_v1 = mock.MagicMock(return_value={
+            'id': 1, 'task': 'Do dishes'
+        })
+        get_tasks_v1.__name__ = 'get_tasks_v1'
+        get_tasks_v2 = mock.MagicMock(return_value={
+            'id': 2, 'task': 'Do laundry'
+        })
+        get_tasks_v2.__name__ = 'get_tasks_v2'
+
+        api_201409 = Api(version="v1")
+        api_201507 = Api(version="v2")
+        api_201409.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/task/",
+            handler=get_tasks_v1
+        ))
+        api_201507.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/task/",
+            handler=get_tasks_v2
+        ))
+
+        app.register_blueprint(api_201409)
+        app.register_blueprint(api_201507)
+
+        app.config['TESTING'] = True
+        self.app = app.test_client()
+
+        resp = self.app.get('/v1/task/', content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+
+        data = json.loads(resp.data.decode(resp.charset))
+        self.assertEqual(data, {
+            'id': 1, 'task': 'Do dishes'
+        })
+
+        self.assertEqual(get_tasks_v1.call_count, 1)
+        self.assertEqual(get_tasks_v2.call_count, 0)
+
+        resp = self.app.get('/v2/task/', content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+
+        data = json.loads(resp.data.decode(resp.charset))
+        self.assertEqual(data, {
+            'id': 2, 'task': 'Do laundry'
+        })
+
+        self.assertEqual(get_tasks_v1.call_count, 1)
+        self.assertEqual(get_tasks_v2.call_count, 1)
+
+    def test_versions_with_different_endpoints_different_url(self):
+        app = Flask(__name__)
+
+        get_tasks = mock.MagicMock(return_value={
+            'id': 1, 'task': 'Do dishes'
+        })
+        get_tasks.__name__ = 'get_tasks'
+        get_users = mock.MagicMock(return_value={
+            'id': 2, 'username': 'johndoe'
+        })
+        get_users.__name__ = 'get_users'
+
+        api_201409 = Api(version="v1")
+        api_201507 = Api(version="v2")
+        api_201409.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/task/",
+            handler=get_tasks
+        ))
+        api_201507.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/users/",
+            handler=get_users
+        ))
+
+        app.register_blueprint(api_201409)
+        app.register_blueprint(api_201507)
+
+        app.config['TESTING'] = True
+        self.app = app.test_client()
+
+        resp = self.app.get('/v1/users/', content_type='application/json')
+        self.assertEqual(resp.status_code, 404)
+
+        resp = self.app.get('/v1/task/', content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+
+        data = json.loads(resp.data.decode(resp.charset))
+        self.assertEqual(data, {
+            'id': 1, 'task': 'Do dishes'
+        })
+
+        self.assertEqual(get_tasks.call_count, 1)
+        self.assertEqual(get_users.call_count, 0)
+
+        resp = self.app.get('/v2/task/', content_type='application/json')
+        self.assertEqual(resp.status_code, 404)
+
+        resp = self.app.get('/v2/users/', content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+
+        data = json.loads(resp.data.decode(resp.charset))
+        self.assertEqual(data, {
+            'id': 2, 'username': 'johndoe'
+        })
+
+        self.assertEqual(get_tasks.call_count, 1)
+        self.assertEqual(get_users.call_count, 1)
 
 
 class URLTestCase(unittest.TestCase):
