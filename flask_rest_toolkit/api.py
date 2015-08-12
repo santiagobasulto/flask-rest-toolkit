@@ -1,7 +1,6 @@
 from werkzeug.wrappers import Response as ResponseBase
 
 from flask import Blueprint, request, make_response
-from flask import Response
 
 from .serializers import JsonSerializer
 
@@ -16,17 +15,15 @@ class ViewHandler(object):
     def __init__(self, endpoint):
         self.endpoint = endpoint
 
-    def __call__(self, *args, **kwargs):
-        if self.endpoint.authentication:
-            self.endpoint.authentication.authenticate(request)
-        try:
-            output = self.endpoint.handler(request, *args, **kwargs)
-        except Exception as exc:
-            for exc_class, status_code in self.endpoint.exceptions:
-                if exc_class == exc.__class__:
-                    return make_response("", status_code)
-            raise exc
+    def process_request(self, request):
+        for middleware_class in self.endpoint.middleware:
+            middleware = middleware_class()
+            method = getattr(middleware, 'process_request')
+            result = method(request)
+            if result:
+                return result
 
+    def build_response(self, output):
         if isinstance(output, ResponseBase):
             return output
 
@@ -40,6 +37,23 @@ class ViewHandler(object):
         response.headers.extend(headers or {})
         response.headers['Content-Type'] = JsonSerializer().get_content_type()
         return response
+
+    def __call__(self, *args, **kwargs):
+        if self.endpoint.authentication:
+            self.endpoint.authentication.authenticate(request)
+
+        output = self.process_request(request)
+
+        if not output:
+            try:
+                output = self.endpoint.handler(request, *args, **kwargs)
+            except Exception as exc:
+                for exc_class, status_code in self.endpoint.exceptions:
+                    if exc_class == exc.__class__:
+                        return make_response("", status_code)
+                raise exc
+
+        return self.build_response(output)
 
 
 class Api(Blueprint):
