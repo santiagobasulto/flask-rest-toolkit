@@ -50,6 +50,8 @@ class ViewHandler(object):
             except Exception as exc:
                 for exc_class, status_code in self.endpoint.exceptions:
                     if exc_class == exc.__class__:
+                        if hasattr(exc, 'data'):
+                            return self.build_response((exc.data, status_code))
                         return make_response("", status_code)
                 raise exc
 

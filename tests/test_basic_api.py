@@ -447,53 +447,5 @@ class HTTPStatusCodeSTestCase(unittest.TestCase):
         self.assertEqual(data['task'], 'Conflicted Task')
 
 
-class ExceptionsTestCase(unittest.TestCase):
-    def setUp(self):
-        app = Flask(__name__)
-
-        def raises_dummy_exception(request):
-            exc_type = request.args.get('exc_type')
-
-            if exc_type == 'subclass':
-                raise DummyExceptionSubclass()
-            elif exc_type == 'other-subclass':
-                raise DummyExceptionOtherSubclass()
-
-            raise DummyException()
-
-        api_201409 = Api(version="v1")
-        api_201409.register_endpoint(ApiEndpoint(
-            http_method="GET",
-            endpoint="/dummy-exception",
-            handler=raises_dummy_exception,
-            exceptions=[
-                (DummyExceptionOtherSubclass, 409),
-                (DummyExceptionSubclass, 406),
-                (DummyException, 400)
-            ]
-        ))
-
-        app.register_blueprint(api_201409)
-
-        app.config['TESTING'] = True
-        self.app = app.test_client()
-
-    def test_different_exceptions_with_different_codes(self):
-        resp = self.app.get(
-            '/v1/dummy-exception?exc_type=subclass',
-            content_type='application/json')
-        self.assertEqual(resp.status_code, 406)
-
-        resp = self.app.get(
-            '/v1/dummy-exception?exc_type=other-subclass',
-            content_type='application/json')
-        self.assertEqual(resp.status_code, 409)
-
-        resp = self.app.get(
-            '/v1/dummy-exception',
-            content_type='application/json')
-        self.assertEqual(resp.status_code, 400)
-
-
 class ExtraHeadersTestCase(unittest.TestCase):
     pass
