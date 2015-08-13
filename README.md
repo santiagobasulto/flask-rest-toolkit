@@ -63,8 +63,10 @@ def get_tasks(request):
 
 Functions receive a _request_ as first parameter and must return `data[, status_code, additional_headers]`. Full example:
 
-    def get_tasks(request):
-       return [{'id': 1, 'task': 'Do the dishes'}], 201, {'X-API-version': 'v1'}
+```python
+def get_tasks(request):
+   return [{'id': 1, 'task': 'Do the dishes'}], 201, {'X-API-version': 'v1'}
+```
 
 **3) Hook up an endpoint**
 
