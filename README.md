@@ -13,34 +13,36 @@ This toolkit is conceived just as a set of tools to ease development of a simple
 
 I recommend checking the `tests/` directory for every possible usage. But this would be the minimum required to build an API:
 
-    app = Flask("TODO App")
-    tasks = [
-        {'id': 1, 'task': 'Do the laundry'},
-        {'id': 2, 'task': 'Do the dishes'},
-    ]
+```python
+app = Flask("TODO App")
+tasks = [
+    {'id': 1, 'task': 'Do the laundry'},
+    {'id': 2, 'task': 'Do the dishes'},
+]
 
-    def get_task(request):
-        return tasks
+def get_task(request):
+    return tasks
 
-    def post_task(request):
-        data = request.json
-        tasks.append({'task': data['task']})
-        return {}, 201
+def post_task(request):
+    data = request.json
+    tasks.append({'task': data['task']})
+    return {}, 201
 
-    api_v1 = Api(version="v1")
-    api_v1.register_endpoint(ApiEndpoint(
-        http_method="GET",
-        endpoint="/task/",
-        handler=get_task
-    ))
+api_v1 = Api(version="v1")
+api_v1.register_endpoint(ApiEndpoint(
+    http_method="GET",
+    endpoint="/task/",
+    handler=get_task
+))
 
-    api_v1.register_endpoint(ApiEndpoint(
-        http_method="POST",
-        endpoint="/task/",
-        handler=post_task
-    ))
+api_v1.register_endpoint(ApiEndpoint(
+    http_method="POST",
+    endpoint="/task/",
+    handler=post_task
+))
 
-    app.register_blueprint(api_v1)
+app.register_blueprint(api_v1)
+```
 
 Flask REST toolkit supports serialization. The default serialization method is JSON. We plan to add more serialization options and make them configurable in an API and EndPoint level.
 
@@ -48,13 +50,16 @@ Flask REST toolkit supports serialization. The default serialization method is J
 
 **1) Create an API**
 
-    api = Api(version="v1")
-
+```python
+api = Api(version="v1")
+```
 
 **2) Write your function**
 
-    def get_tasks(request):
-       return [{'id': 1, 'task': 'Do the dishes'}]
+```python
+def get_tasks(request):
+   return [{'id': 1, 'task': 'Do the dishes'}]
+```
 
 Functions receive a _request_ as first parameter and must return `data[, status_code, additional_headers]`. Full example:
 
@@ -63,28 +68,34 @@ Functions receive a _request_ as first parameter and must return `data[, status_
 
 **3) Hook up an endpoint**
 
-    api.register_endpoint(ApiEndpoint(
-        http_method="GET",
-        endpoint="/task/",
-        handler=get_task
-    ))
+```python
+api.register_endpoint(ApiEndpoint(
+    http_method="GET",
+    endpoint="/task/",
+    handler=get_task
+))
+```
 
 Every endpoint receives an _HTTP method_ for which it'll act, a _path_ and a _function_ (previous step) that will be executed.
 
 **4) Hook up the API to the App. (this will probably change)**
 
-    app.register_blueprint(api_v1)
+```python
+app.register_blueprint(api_v1)
+```
 
 ### Authentication and Authorization
 
 Flask REST toolkit support a simple Auth scheme along with several helpful classes to ease your development. To use it just indicate the authentication class in your endpoint:
 
-    api_v1.register_endpoint(ApiEndpoint(
-        http_method="GET",
-        endpoint="/task/",
-        handler=get_task,
-        authentication=YourAuthenticationClass()
-    ))
+```python
+api_v1.register_endpoint(ApiEndpoint(
+    http_method="GET",
+    endpoint="/task/",
+    handler=get_task,
+    authentication=YourAuthenticationClass()
+))
+```
 
 An authentication class can must implement two methods:
 
@@ -93,6 +104,7 @@ An authentication class can must implement two methods:
 
 If any method returns None the user is considered to pass your auth method. On the contrary, you can raise a Werkzeug exception to flag the user is not authorized to access a given resource. Example:
 
+```python
 from werkzeug.exceptions import Unauthorized, Forbidden
 
 class YourAuthenticationClass(object):
@@ -107,6 +119,7 @@ class YourAuthenticationClass(object):
     def authorize(self, request):
         if request.path.startswith('/admin/') and request.remote_addr not in self.ADMINS:
             raise Forbidden()
+```
 
 There are a few classes to ease development. Currently the most interesting one is `flask_rest_toolkit.auth.BasicAuth`. Check out the source code for more details.
 
