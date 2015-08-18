@@ -12,8 +12,9 @@ SERIALIZERS = {
 
 
 class ViewHandler(object):
-    def __init__(self, endpoint):
+    def __init__(self, endpoint, api):
         self.endpoint = endpoint
+        self.api = api
 
     def process_request(self, request):
         for middleware_class in self.endpoint.middleware:
@@ -46,6 +47,7 @@ class ViewHandler(object):
 
         if not output:
             try:
+                request.api = self.api
                 output = self.endpoint.handler(request, *args, **kwargs)
             except Exception as exc:
                 for exc_class, status_code in self.endpoint.exceptions:
@@ -83,6 +85,6 @@ class Api(Blueprint):
         self.add_url_rule(
             url,
             view_name,
-            ViewHandler(endpoint=endpoint),
+            ViewHandler(endpoint=endpoint, api=self),
             methods=methods
         )

@@ -1,6 +1,9 @@
 import json
 import unittest
-import mock
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 from flask import Flask
 
@@ -117,6 +120,44 @@ class VersioningTestCase(unittest.TestCase):
 
         resp = self.app.get('/v2/task/', content_type='application/json')
         self.assertEqual(resp.status_code, 200)
+
+    def test_version_accesible_from_handler(self):
+        app = Flask(__name__)
+
+        def get_task(request):
+            return {'version': request.api.version}
+
+        api_201409 = Api(version="v1")
+        api_201507 = Api(version="v2")
+        task_endpoint = ApiEndpoint(
+            http_method="GET",
+            endpoint="/task/",
+            handler=get_task
+        )
+        api_201409.register_endpoint(task_endpoint)
+        api_201507.register_endpoint(task_endpoint)
+
+        app.register_blueprint(api_201409)
+        app.register_blueprint(api_201507)
+
+        app.config['TESTING'] = True
+        self.app = app.test_client()
+
+        resp = self.app.get('/v1/task/', content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+
+        data = json.loads(resp.data.decode(resp.charset))
+        self.assertEqual(data, {
+            'version': 'v1'
+        })
+
+        resp = self.app.get('/v2/task/', content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+
+        data = json.loads(resp.data.decode(resp.charset))
+        self.assertEqual(data, {
+            'version': 'v2'
+        })
 
     def test_versions_with_different_endpoints_same_url(self):
         app = Flask(__name__)
