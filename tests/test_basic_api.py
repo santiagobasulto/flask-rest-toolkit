@@ -86,6 +86,43 @@ class ApiTestCase(unittest.TestCase):
         self.assertEqual(resp.headers['Content-Type'], 'application/json')
 
 
+class QueryParamsTestCase(unittest.TestCase):
+    def test_query_params_are_accesible(self):
+        app = Flask(__name__)
+
+        def multiplier(request, value):
+            return {'result': value * int(request.args.get('multiplier', 1))}
+
+        api_v1 = Api(version="v1")
+        multiplier_endpoint = ApiEndpoint(
+            http_method="GET",
+            endpoint="/multiply/<int:value>/",
+            handler=multiplier
+        )
+        api_v1.register_endpoint(multiplier_endpoint)
+
+        app.register_blueprint(api_v1)
+
+        app.config['TESTING'] = True
+        self.app = app.test_client()
+
+        resp = self.app.get('/v1/multiply/3/', content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+
+        data = json.loads(resp.data.decode(resp.charset))
+        self.assertEqual(data, {
+            'result': 3
+        })
+
+        resp = self.app.get('/v1/multiply/3/?multiplier=5', content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+
+        data = json.loads(resp.data.decode(resp.charset))
+        self.assertEqual(data, {
+            'result': 15
+        })
+
+
 class VersioningTestCase(unittest.TestCase):
     def setUp(self):
         self.tasks = [
