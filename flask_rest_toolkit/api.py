@@ -78,8 +78,8 @@ class Api(Blueprint):
         if not isinstance(endpoint.http_method, (list, tuple)):
             methods = [endpoint.http_method]
 
-        view_name = "{path}-{view}".format(
-            path=url, view=endpoint.handler.__name__
+        view_name = "{method}-{path}-{view}".format(
+            method=str(methods), path=url, view=endpoint.handler.__name__
         )
 
         self.add_url_rule(
