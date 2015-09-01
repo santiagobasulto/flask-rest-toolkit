@@ -494,6 +494,9 @@ class HTTPStatusCodeSTestCase(unittest.TestCase):
         def conflict_handler(request):
             return {'task': 'Conflicted Task'}, 409
 
+        def no_content_handler(request):
+            return {'task': 'Do dishes', 'id': 11}, 204
+
         api_201409 = Api(version="v1")
         api_201409.register_endpoint(ApiEndpoint(
             http_method=["GET", "POST"],
@@ -504,6 +507,11 @@ class HTTPStatusCodeSTestCase(unittest.TestCase):
             http_method="GET",
             endpoint="/conflict",
             handler=conflict_handler
+        ))
+        api_201409.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/no-content",
+            handler=no_content_handler
         ))
 
         app.register_blueprint(api_201409)
@@ -517,6 +525,13 @@ class HTTPStatusCodeSTestCase(unittest.TestCase):
 
         resp = self.app.post('/v1/', content_type='application/json')
         self.assertEqual(resp.status_code, 201)
+
+    def test_no_content_status_code(self):
+        resp = self.app.get('/v1/no-content', content_type='application/json')
+        self.assertEqual(resp.status_code, 204)
+        self.assertTrue(resp.data is not b'')
+        data = json.loads(resp.data.decode(resp.charset))
+        self.assertEqual(data, {'task': 'Do dishes', 'id': 11})
 
     def test_conflict_code(self):
         resp = self.app.get('/v1/conflict', content_type='application/json')

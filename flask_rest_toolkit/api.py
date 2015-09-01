@@ -30,13 +30,11 @@ class ViewHandler(object):
 
         data, code, headers = unpack(output)
         serializer = JsonSerializer()
-
+        headers = headers or {}
+        headers.update({'Content-Type': JsonSerializer().get_content_type()})
         response = make_response(
-            serializer.serialize(data),
-            code
+            serializer.serialize(data), code, headers
         )
-        response.headers.extend(headers or {})
-        response.headers['Content-Type'] = JsonSerializer().get_content_type()
         return response
 
     def __call__(self, *args, **kwargs):
