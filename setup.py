@@ -1,10 +1,29 @@
 import os
+import ast
 
 from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
-import flask_rest_toolkit
-version = flask_rest_toolkit.__version__
+VALUES = {
+    '__version__': None,
+    '__title__': None,
+    '__description__': None
+}
+
+with open('flask_rest_toolkit/__init__.py', 'r') as f:
+    tree = ast.parse(f.read())
+    for node in tree.body:
+        if node.__class__ != ast.Assign:
+            continue
+        target = node.targets[0]
+        if target.id in VALUES:
+            VALUES[target.id] = node.value.s
+
+if not all(VALUES.values()):
+    raise RuntimeError("Can't locate values to init setuptools hook.")
+
+
+version = VALUES['__version__']
 project_name = os.path.basename(os.path.dirname(os.path.realpath(__file__)))
 project_url = 'http://github.com/santiagobasulto/{project_name}'.format(
     project_name=project_name)
@@ -29,9 +48,9 @@ class PyTest(TestCommand):
         sys.exit(errno)
 
 setup(
-    name=flask_rest_toolkit.__title__,
+    name=VALUES['__title__'],
     version=version,
-    description=flask_rest_toolkit.__description__,
+    description=VALUES['__description__'],
     url=project_url,
     download_url="{url}/tarball/{version}".format(
         url=project_url, version=version),
