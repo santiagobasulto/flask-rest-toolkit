@@ -17,12 +17,17 @@ class ViewHandler(object):
         self.api = api
 
     def process_request(self, request):
-        for middleware_class in self.endpoint.middleware:
-            middleware = middleware_class()
-            method = getattr(middleware, 'process_request')
-            result = method(request)
-            if result:
-                return result
+        try:
+            for middleware_class in self.endpoint.middleware:
+                middleware = middleware_class()
+                method = getattr(middleware, 'process_request')
+                result = method(request)
+                if result:
+                    return result
+        except Exception as exc:
+            return self._handle_exception(
+                exc,
+                self.endpoint.exceptions + (getattr(middleware_class, 'EXCEPTIONS', [])))
 
     def build_response(self, output):
         if isinstance(output, ResponseBase):
@@ -39,24 +44,26 @@ class ViewHandler(object):
         response.headers['Content-Type'] = JsonSerializer().get_content_type()
         return response
 
+    def _handle_exception(self, exc, exception_list):
+        for exc_class, status_code in exception_list:
+            if exc_class == exc.__class__:
+                if hasattr(exc, 'data'):
+                    return self.build_response((exc.data, status_code))
+                return make_response("", status_code)
+        raise exc
+
     def __call__(self, *args, **kwargs):
         if self.endpoint.authentication:
             self.endpoint.authentication.authenticate(request)
 
-        try:
-            output = self.process_request(request)
+        output = self.process_request(request)
 
-            if not output:
-                request.api = self.api
+        if not output:
+            request.api = self.api
+            try:
                 output = self.endpoint.handler(request, *args, **kwargs)
-
-        except Exception as exc:
-            for exc_class, status_code in self.endpoint.exceptions:
-                if exc_class == exc.__class__:
-                    if hasattr(exc, 'data'):
-                        return self.build_response((exc.data, status_code))
-                    return make_response("", status_code)
-            raise exc
+            except Exception as exc:
+                return self._handle_exception(exc, self.endpoint.exceptions)
 
         return self.build_response(output)
 

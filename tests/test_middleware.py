@@ -23,6 +23,15 @@ class CustomException(Exception):
     pass
 
 
+class FullCustomExceptionMiddleware(object):
+    EXCEPTIONS = [
+        (CustomException, 400)
+    ]
+
+    def process_request(self, request):
+        raise CustomException()
+
+
 class CustomExceptionMiddleware(object):
     def process_request(self, request):
         raise CustomException()
@@ -208,7 +217,8 @@ class ExceptionMiddlewareTestCase(unittest.TestCase):
             {'id': 3, 'task': 'Take the dog out'},
         ]
 
-    def test_exception_is_defined_by_endpoint(self):
+    def test_exception_is_not_defined_and_propagated(self):
+        "Should propagate the exception if it's not defined"
         app = Flask(__name__)
 
         def get_tasks(request):
@@ -221,6 +231,81 @@ class ExceptionMiddlewareTestCase(unittest.TestCase):
             handler=get_tasks,
             middleware=[
                 CustomExceptionMiddleware
+            ]
+        ))
+        app.register_blueprint(api_201409)
+
+        app.config['TESTING'] = True
+        self.app = app.test_client()
+
+        with self.assertRaises(CustomException):
+            self.app.get('/v1/task/', content_type='application/json')
+
+    def test_exception_is_defined_by_endpoint(self):
+        "Should get the exception defined by the endpoint"
+        app = Flask(__name__)
+
+        def get_tasks(request):
+            return self.tasks
+
+        api_201409 = Api(version="v1")
+        api_201409.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/task/",
+            handler=get_tasks,
+            middleware=[
+                CustomExceptionMiddleware
+            ],
+            exceptions=[
+                (CustomException, 409),
+            ]
+        ))
+        app.register_blueprint(api_201409)
+
+        app.config['TESTING'] = True
+        self.app = app.test_client()
+
+        resp = self.app.get('/v1/task/', content_type='application/json')
+        self.assertEqual(resp.status_code, 409)
+
+    def test_exception_is_defined_by_middleware(self):
+        "Should get the exception defined in the middleware"
+        app = Flask(__name__)
+
+        def get_tasks(request):
+            return self.tasks
+
+        api_201409 = Api(version="v1")
+        api_201409.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/task/",
+            handler=get_tasks,
+            middleware=[
+                FullCustomExceptionMiddleware
+            ]
+        ))
+        app.register_blueprint(api_201409)
+
+        app.config['TESTING'] = True
+        self.app = app.test_client()
+
+        resp = self.app.get('/v1/task/', content_type='application/json')
+        self.assertEqual(resp.status_code, 400)
+
+    def test_exception_is_overwritten_by_endpoint(self):
+        "The endpoint exception should take precedence"
+        app = Flask(__name__)
+
+        def get_tasks(request):
+            return self.tasks
+
+        api_201409 = Api(version="v1")
+        api_201409.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/task/",
+            handler=get_tasks,
+            middleware=[
+                FullCustomExceptionMiddleware
             ],
             exceptions=[
                 (CustomException, 409),
