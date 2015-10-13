@@ -43,19 +43,20 @@ class ViewHandler(object):
         if self.endpoint.authentication:
             self.endpoint.authentication.authenticate(request)
 
-        output = self.process_request(request)
+        try:
+            output = self.process_request(request)
 
-        if not output:
-            try:
+            if not output:
                 request.api = self.api
                 output = self.endpoint.handler(request, *args, **kwargs)
-            except Exception as exc:
-                for exc_class, status_code in self.endpoint.exceptions:
-                    if exc_class == exc.__class__:
-                        if hasattr(exc, 'data'):
-                            return self.build_response((exc.data, status_code))
-                        return make_response("", status_code)
-                raise exc
+
+        except Exception as exc:
+            for exc_class, status_code in self.endpoint.exceptions:
+                if exc_class == exc.__class__:
+                    if hasattr(exc, 'data'):
+                        return self.build_response((exc.data, status_code))
+                    return make_response("", status_code)
+            raise exc
 
         return self.build_response(output)
 

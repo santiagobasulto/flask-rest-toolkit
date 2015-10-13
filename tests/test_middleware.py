@@ -19,6 +19,15 @@ class ForbiddenMiddleware(object):
         raise Forbidden()
 
 
+class CustomException(Exception):
+    pass
+
+
+class CustomExceptionMiddleware(object):
+    def process_request(self, request):
+        raise CustomException()
+
+
 class RedirectResponseMiddleware(object):
     def process_request(self, request):
         return make_response("Redirecting...", 302)
@@ -44,7 +53,8 @@ class EndpointMiddlewareTestCase(unittest.TestCase):
             return self.tasks
 
         api_201409 = Api(version="v1")
-        with mock.patch.object(DummyMiddleware, 'process_request', return_value=None) as mock_method:
+        with mock.patch.object(DummyMiddleware, 'process_request',
+                               return_value=None) as mock_method:
             api_201409.register_endpoint(ApiEndpoint(
                 http_method="GET",
                 endpoint="/task/",
@@ -188,3 +198,38 @@ class EndpointMiddlewareTestCase(unittest.TestCase):
 
         resp = self.app.get('/v1/task/', content_type='application/json')
         self.assertEqual(resp.status_code, 403)
+
+
+class ExceptionMiddlewareTestCase(unittest.TestCase):
+    def setUp(self):
+        self.tasks = [
+            {'id': 1, 'task': 'Do the laundry'},
+            {'id': 2, 'task': 'Do the dishes'},
+            {'id': 3, 'task': 'Take the dog out'},
+        ]
+
+    def test_exception_is_defined_by_endpoint(self):
+        app = Flask(__name__)
+
+        def get_tasks(request):
+            return self.tasks
+
+        api_201409 = Api(version="v1")
+        api_201409.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/task/",
+            handler=get_tasks,
+            middleware=[
+                CustomExceptionMiddleware
+            ],
+            exceptions=[
+                (CustomException, 409),
+            ]
+        ))
+        app.register_blueprint(api_201409)
+
+        app.config['TESTING'] = True
+        self.app = app.test_client()
+
+        resp = self.app.get('/v1/task/', content_type='application/json')
+        self.assertEqual(resp.status_code, 409)
