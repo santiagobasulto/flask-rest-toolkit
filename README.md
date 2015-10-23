@@ -154,6 +154,34 @@ api_v1.register_endpoint(ApiEndpoint(
 
 Check `tests/test_middleware.py` for more details.
 
+### Expected exceptions
+
+An endpoint could possibly raise an exception that is expected. You can specify a list of exceptions to expect and how to react to them. Example:
+
+We have a simple method `register_user` tied to an endpoint. That method could raise a known and expected exception when the email used is already present in the database. You can specify how to react to that exception if it happens in your endpoint.
+
+```python
+def register_user(request):
+    if email_exists(request.json['email']):
+        raise UserEmailAlreadyExistsException()
+    if len(request.json['password']) < 5:
+        raise PasswordNotStrongEnoughException()
+
+api_v1.register_endpoint(ApiEndpoint(
+    http_method="POST",
+    endpoint="/user/",
+    handler=register_user,
+    exceptions=[
+        (UserEmailAlreadyExistsException, 409),  # Conflict
+        (PasswordNotStrongEnoughException, 400)
+    ]
+))
+```
+
+**All the exceptions not specified there will be treated as errors and return a 500**
+
+You can also work with hierarchies of exceptions. Please check tests for more details: `tests/errors.py`
+
 # Run tests
 
     $ python setup.py test
