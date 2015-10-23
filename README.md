@@ -127,9 +127,32 @@ There are a few classes to ease development. Currently the most interesting one 
 
 ### Middleware
 
-Each endpoint can define a list of middleware classes that will be invoked before the request. Each middleware must implement a `process_request` method that will take place before the actual endpoint handler is invoked.
+Each endpoint can define a list of middleware classes that **will be invoked in order before the request**. Each middleware must implement a `process_request` method that will take place before the actual endpoint handler is invoked.
 
-You can define multiple middleware classes that will be invoked one after the other. Check `tests/test_middleware.py` for more details.
+Simple example:
+
+```python
+from werkzeug.exceptions import Forbidden
+
+class UserMiddleware(object):
+    def process_request(self, request):
+        request.user = User(...)
+
+class AdminMiddleware(object):
+    def process_request(self, request):
+        if request.user.role != 'admin':
+            raise Forbidden()
+
+api_v1.register_endpoint(ApiEndpoint(
+    http_method="GET",
+    endpoint="/admin/task/",
+    handler=get_task_admin,
+    middleware=[UserMiddleware, AdminMiddleware]
+))
+
+```
+
+Check `tests/test_middleware.py` for more details.
 
 # Run tests
 
