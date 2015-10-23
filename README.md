@@ -178,6 +178,8 @@ api_v1.register_endpoint(ApiEndpoint(
 ))
 ```
 
+In that case when a `UserEmailAlreadyExistsException` happens a 409 will be returned to the client.
+
 **All the exceptions not specified there will be treated as errors and return a 500**
 
 You can also work with hierarchies of exceptions. Please check tests for more details: `tests/errors.py`
