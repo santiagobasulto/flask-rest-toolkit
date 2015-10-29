@@ -481,7 +481,7 @@ class HTTPMethodsTestCase(unittest.TestCase):
         self.assertEqual(data, deleted_task)
 
 
-class HTTPStatusCodeSTestCase(unittest.TestCase):
+class HTTPStatusCodesTestCase(unittest.TestCase):
     def setUp(self):
         app = Flask(__name__)
 
@@ -527,3 +527,81 @@ class HTTPStatusCodeSTestCase(unittest.TestCase):
 
 class ExtraHeadersTestCase(unittest.TestCase):
     pass
+
+
+class LogicalAPINamingTestCase(unittest.TestCase):
+    def setUp(self):
+        self.app = Flask(__name__)
+        self.tasks = [
+            {'id': 1, 'task': 'Do the laundry'},
+            {'id': 2, 'task': 'Do the dishes'},
+        ]
+
+        def get_tasks(request):
+            return self.tasks
+
+        def post_task(request):
+            data = request.json
+            self.tasks.append({'task': data['task']})
+            return {}, 201
+
+        self.get_tasks = get_tasks
+        self.post_task = post_task
+
+    def test_naming_a_single_api(self):
+        api_1 = Api(version="v1", name="read-only-methods")
+        api_1.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/task/",
+            handler=self.get_tasks
+        ))
+
+        self.app.register_blueprint(api_1)
+        self.app.config['TESTING'] = True
+
+        client = self.app.test_client()
+        resp = client.get('/v1/task/', content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.headers['Content-Type'], 'application/json')
+
+        data = json.loads(resp.data.decode(resp.charset))
+        self.assertEqual(len(data), 2)
+
+    def test_naming_multiple_logic_apis(self):
+        api_1 = Api(version="v1", name="read-only-methods")
+        api_1.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/task/",
+            handler=self.get_tasks
+        ))
+
+        self.app.register_blueprint(api_1)
+
+        api_2 = Api(version="v1", name="write-methods")
+        api_2.register_endpoint(ApiEndpoint(
+            http_method="POST",
+            endpoint="/task/",
+            handler=self.post_task
+        ))
+        self.app.register_blueprint(api_2)
+        self.app.config['TESTING'] = True
+
+        client = self.app.test_client()
+
+        # Testing GET
+        resp = client.get('/v1/task/', content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.headers['Content-Type'], 'application/json')
+
+        data = json.loads(resp.data.decode(resp.charset))
+        self.assertEqual(len(data), 2)
+
+        # Testing POST
+        resp = client.post(
+            '/v1/task/',
+            content_type='application/json',
+            data=json.dumps({'task': 'New Task!'}))
+
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.headers['Content-Type'], 'application/json')
+        self.assertEqual(len(self.tasks), 3)

@@ -69,8 +69,8 @@ class ViewHandler(object):
 
 
 class Api(Blueprint):
-    def __init__(self, version=None, serializer='json'):
-        super(Api, self).__init__(version, __name__)
+    def __init__(self, version=None, name=None, serializer='json'):
+        super(Api, self).__init__(version + (name or ''), __name__)
         self.version = version
         self.endpoints = []
         self.serializer = SERIALIZERS[serializer]()
