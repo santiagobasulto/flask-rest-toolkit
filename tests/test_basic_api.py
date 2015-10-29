@@ -444,7 +444,7 @@ class HTTPMethodsTestCase(unittest.TestCase):
         self.assertEqual(len(self.tasks), 3)
 
     def test_put(self):
-        tasks = self.tasks.copy()
+        tasks = self.tasks[:]
 
         resp = self.app.put(
             '/v1/task/2/', content_type='application/json',
@@ -456,7 +456,7 @@ class HTTPMethodsTestCase(unittest.TestCase):
         self.assertEqual(self.tasks, tasks)
 
     def test_patch(self):
-        tasks = self.tasks.copy()
+        tasks = self.tasks[:]
 
         resp = self.app.patch(
             '/v1/task/2/', content_type='application/json',
@@ -467,7 +467,7 @@ class HTTPMethodsTestCase(unittest.TestCase):
         self.assertEqual(self.tasks, tasks)
 
     def test_delete(self):
-        tasks, deleted_task = self.tasks.copy()[:1], self.tasks.copy()[-1]
+        tasks, deleted_task = self.tasks[:][:1], self.tasks[:][-1]
 
         resp = self.app.delete(
             '/v1/task/2/', content_type='application/json')
