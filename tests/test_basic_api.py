@@ -114,7 +114,9 @@ class QueryParamsTestCase(unittest.TestCase):
             'result': 3
         })
 
-        resp = self.app.get('/v1/multiply/3/?multiplier=5', content_type='application/json')
+        resp = self.app.get(
+            '/v1/multiply/3/?multiplier=5',
+            content_type='application/json')
         self.assertEqual(resp.status_code, 200)
 
         data = json.loads(resp.data.decode(resp.charset))
@@ -307,6 +309,66 @@ class VersioningTestCase(unittest.TestCase):
 
         self.assertEqual(get_tasks.call_count, 1)
         self.assertEqual(get_users.call_count, 1)
+
+    def test_api_without_a_version_and_without_name(self):
+        app = Flask(__name__)
+
+        get_tasks = mock.MagicMock(return_value={
+            'id': 1, 'task': 'Do dishes'
+        })
+        get_tasks.__name__ = 'get_tasks'
+
+        api_v1 = Api()
+
+        api_v1.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/task/",
+            handler=get_tasks
+        ))
+        app.register_blueprint(api_v1)
+
+        app.config['TESTING'] = True
+        self.app = app.test_client()
+
+        resp = self.app.get('/task/', content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+
+        data = json.loads(resp.data.decode(resp.charset))
+        self.assertEqual(data, {
+            'id': 1, 'task': 'Do dishes'
+        })
+
+        self.assertEqual(get_tasks.call_count, 1)
+
+    def test_api_without_a_version_and_with_name(self):
+        app = Flask(__name__)
+
+        get_tasks = mock.MagicMock(return_value={
+            'id': 1, 'task': 'Do dishes'
+        })
+        get_tasks.__name__ = 'get_tasks'
+
+        api_v1 = Api(name="Test-API")
+
+        api_v1.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/task/",
+            handler=get_tasks
+        ))
+        app.register_blueprint(api_v1)
+
+        app.config['TESTING'] = True
+        self.app = app.test_client()
+
+        resp = self.app.get('/task/', content_type='application/json')
+        self.assertEqual(resp.status_code, 200)
+
+        data = json.loads(resp.data.decode(resp.charset))
+        self.assertEqual(data, {
+            'id': 1, 'task': 'Do dishes'
+        })
+
+        self.assertEqual(get_tasks.call_count, 1)
 
 
 class URLTestCase(unittest.TestCase):
