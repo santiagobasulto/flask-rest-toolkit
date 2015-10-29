@@ -12,7 +12,10 @@ from flask_rest_toolkit.auth import (
     BasicAuth, And, NoAuthorizationStrategy,
     AuthenticationStrategy)
 
-from unittest import mock
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 
 class BasicAuthUnitTestCase(unittest.TestCase):

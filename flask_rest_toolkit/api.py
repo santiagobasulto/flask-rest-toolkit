@@ -2,12 +2,15 @@ from werkzeug.wrappers import Response as ResponseBase
 
 from flask import Blueprint, request, make_response
 
-from .serializers import JsonSerializer
+from . import serializers
+from . import exceptions
 
 from .utils import unpack
 
 SERIALIZERS = {
-    'json': JsonSerializer
+    'json': serializers.JsonSerializer,
+    'text': serializers.TextSerializer,
+    'javascript': serializers.JavascriptSerializer,
 }
 
 
@@ -27,21 +30,33 @@ class ViewHandler(object):
         except Exception as exc:
             return self._handle_exception(
                 exc,
-                self.endpoint.exceptions + (getattr(middleware_class, 'EXCEPTIONS', [])))
+                self.endpoint.exceptions + (getattr(
+                    middleware_class, 'EXCEPTIONS', [])))
+
+    def _get_serializer(self):
+        serializer = self.endpoint.serializer or self.api.serializer
+        if serializer not in SERIALIZERS:
+            raise exceptions.InvalidSerializerException(
+                "{} is an invalid serializer".format(
+                    serializer))
+        return SERIALIZERS[serializer]()
 
     def build_response(self, output):
         if isinstance(output, ResponseBase):
             return output
 
         data, code, headers = unpack(output)
-        serializer = JsonSerializer()
+        serializer = self._get_serializer()
 
         response = make_response(
             serializer.serialize(data),
             code
         )
+
+        response.headers['Content-Type'] = headers.pop(
+            'Content-Type', serializer.get_content_type())
         response.headers.extend(headers or {})
-        response.headers['Content-Type'] = JsonSerializer().get_content_type()
+
         return response
 
     def _handle_exception(self, exc, exception_list):
@@ -73,7 +88,7 @@ class Api(Blueprint):
         super(Api, self).__init__(version + (name or ''), __name__)
         self.version = version
         self.endpoints = []
-        self.serializer = SERIALIZERS[serializer]()
+        self.serializer = serializer
 
     def register_endpoint(self, endpoint):
         self.endpoints.append(endpoint)

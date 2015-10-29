@@ -1,11 +1,15 @@
-import simplejson as json
+# -*- coding: utf-8 -*-
+
+import six
 import unittest
 from decimal import Decimal
+import simplejson as json
 
 from flask import Flask
 
 from flask_rest_toolkit.api import Api
 from flask_rest_toolkit.endpoint import ApiEndpoint
+from flask_rest_toolkit import exceptions
 
 from utils import get_task_by_id
 
@@ -119,3 +123,147 @@ class JsonSerializerTestCase(BasicSerializerTestCase):
         task = self.tasks[-1]
         self.assertEqual(task['task'], 'New Decimal Task')
         self.assertEqual(task['price'], 0.222)
+
+
+class SerializerConfTestCase(unittest.TestCase):
+    def test_unexisting_serializer_raises_proper_exception(self):
+        app = Flask(__name__)
+        app.config['TESTING'] = True
+
+        api_v1 = Api(version="v1")
+        api_v1.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/test/",
+            handler=lambda req: {},
+            serializer='non-existent'
+        ))
+
+        app.register_blueprint(api_v1)
+        client = app.test_client()
+
+        with self.assertRaises(exceptions.InvalidSerializerException):
+            resp = client.get('/v1/test/')
+            self.assertEqual(resp.status_code, 500)
+
+
+class TextAndJavascriptSerializerTestCase(unittest.TestCase):
+    def setUp(self):
+        self.app = Flask(__name__)
+        self.app.config['TESTING'] = True
+
+    def test_js_with_text_serializer(self):
+        "Should return valid javascript using a text serializer"
+
+        def js_endpoint_text_serializer(request):
+            js_text = "window.ReallyImportantVariable = XXX-XXX-001;"
+            return js_text, 200, {'Content-Type': 'application/javascript'}
+
+        api_v1 = Api(version="v1")
+        api_v1.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/js-text-serializer/",
+            handler=js_endpoint_text_serializer,
+            serializer='text'
+        ))
+        self.app.register_blueprint(api_v1)
+
+        client = self.app.test_client()
+        resp = client.get('/v1/js-text-serializer/')
+        self.assertEqual(resp.status_code, 200)
+
+        self.assertEqual(
+            resp.data.decode(resp.charset),
+            "window.ReallyImportantVariable = XXX-XXX-001;"
+        )
+        self.assertEqual(
+            resp.headers['Content-Type'], 'application/javascript')
+
+    def test_js_with_javascript_serializer(self):
+        "Should return valid javascript using the js serializer"
+        api_v1 = Api(version="v1")
+
+        def js_endpoint_javascript_serializer(request):
+            js_text = "window.ReallyImportantVariable = XXX-XXX-002;"
+            return js_text
+
+        api_v1.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/js-javascript-serializer/",
+            handler=js_endpoint_javascript_serializer,
+            serializer='javascript'
+        ))
+        self.app.register_blueprint(api_v1)
+
+        client = self.app.test_client()
+        resp = client.get('/v1/js-javascript-serializer/')
+        self.assertEqual(resp.status_code, 200)
+
+        self.assertEqual(
+            resp.data.decode(resp.charset),
+            "window.ReallyImportantVariable = XXX-XXX-002;"
+        )
+        self.assertEqual(
+            resp.headers['Content-Type'], 'application/javascript')
+
+    def test_byte_text_serializer(self):
+        "Should return correct text response returning bytes"
+        api_v1 = Api(version="v1")
+
+        text = six.b("""
+Plain text
+In Multiple Lines""")
+
+        def bytes_endpoint(request):
+            return text
+
+        api_v1.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/bytes-endpoint/",
+            handler=bytes_endpoint,
+            serializer='text'
+        ))
+        self.app.register_blueprint(api_v1)
+
+        client = self.app.test_client()
+        resp = client.get('/v1/bytes-endpoint/')
+        self.assertEqual(resp.status_code, 200)
+
+        self.assertEqual(resp.data, text)
+        self.assertEqual(
+            resp.data.decode(resp.charset),
+            text.decode('utf-8')
+        )
+        self.assertEqual(
+            resp.headers['Content-Type'], 'text/plain')
+
+    def test_string_unicode_text_serializer(self):
+        "Should return correct text response encoding str/unicode"
+        api_v1 = Api(version="v1")
+
+        text = six.u("""
+Plain text
+ñÑüÜäÄÁáà
+In Multiple Lines""")
+
+        def unicode_endpoint(request):
+            return text
+
+        api_v1.register_endpoint(ApiEndpoint(
+            http_method="GET",
+            endpoint="/unicode-endpoint/",
+            handler=unicode_endpoint,
+            serializer='text'
+        ))
+        self.app.register_blueprint(api_v1)
+
+        client = self.app.test_client()
+        resp = client.get('/v1/unicode-endpoint/')
+        self.assertEqual(resp.status_code, 200)
+
+        self.assertEqual(resp.data, text.encode(resp.charset))
+        self.assertEqual(
+            resp.data.decode(resp.charset),
+            text
+        )
+        self.assertEqual(
+            resp.headers['Content-Type'], 'text/plain')

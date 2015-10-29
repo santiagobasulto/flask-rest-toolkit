@@ -18,3 +18,16 @@ class JsonSerializer(Serializer):
 
     def serialize(self, content):
         return json.dumps(content)
+
+
+class TextSerializer(Serializer):
+    def get_content_type(self):
+        return "text/plain"
+
+    def serialize(self, content):
+        return content
+
+
+class JavascriptSerializer(TextSerializer):
+    def get_content_type(self):
+        return "application/javascript"
