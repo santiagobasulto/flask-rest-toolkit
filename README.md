@@ -30,7 +30,8 @@ def post_task(request):
     tasks.append({'task': data['task']})
     return {}, 201
 
-api_v1 = Api(version="v1")
+api_v1 = Api(version="v1", name="Tasks API") # name is optional,
+                                             # but recommended.
 api_v1.register_endpoint(ApiEndpoint(
     http_method="GET",
     endpoint="/task/",
