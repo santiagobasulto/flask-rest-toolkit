@@ -85,17 +85,20 @@ class ViewHandler(object):
 
 class Api(Blueprint):
     def __init__(self, version=None, name=None, serializer='json'):
-        super(Api, self).__init__(version + (name or ''), __name__)
+        super(Api, self).__init__((version or '') + (name or ''), __name__)
         self.version = version
         self.endpoints = []
         self.serializer = serializer
 
     def register_endpoint(self, endpoint):
         self.endpoints.append(endpoint)
-
-        url = '/{version}{endpoint}'.format(
-            version=self.version,
-            endpoint=endpoint.endpoint)
+        if self.version:
+            url = '/{version}{endpoint}'.format(
+                version=self.version,
+                endpoint=endpoint.endpoint)
+        else:
+            url = '{endpoint}'.format(
+                endpoint=endpoint.endpoint)
 
         methods = endpoint.http_method
         if not isinstance(endpoint.http_method, (list, tuple)):
