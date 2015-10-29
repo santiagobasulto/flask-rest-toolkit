@@ -526,7 +526,71 @@ class HTTPStatusCodesTestCase(unittest.TestCase):
 
 
 class ExtraHeadersTestCase(unittest.TestCase):
-    pass
+    def setUp(self):
+        app = Flask(__name__)
+        self.tasks = [
+            {'id': 1, 'task': 'Do the laundry'},
+            {'id': 2, 'task': 'Do the dishes'},
+        ]
+
+        def get_tasks(request):
+            return self.tasks, 200, {'Access-Control-Allow-Origin': '*'}
+
+        def post_task(request):
+            data = request.json
+            self.tasks.append({'task': data['task']})
+            return {}, 201, {
+                'X-Special-Header': 'XXX',
+                'Access-Control-Allow-Origin': '*'}
+
+        api_201409 = Api(version="v1")
+        task_endpoint = ApiEndpoint(
+            http_method="GET",
+            endpoint="/task/",
+            handler=get_tasks
+        )
+        api_201409.register_endpoint(task_endpoint)
+
+        task_endpoint = ApiEndpoint(
+            http_method="POST",
+            endpoint="/task/",
+            handler=post_task
+        )
+        api_201409.register_endpoint(task_endpoint)
+
+        app.register_blueprint(api_201409)
+
+        app.config['TESTING'] = True
+        self.app = app.test_client()
+
+    def test_spec_headers_returned_by_request(self):
+        "Should return spec headers if specified by the handler"
+        resp = self.app.get('/v1/task/', content_type='application/json')
+        self.assertEqual(
+            resp.headers['Content-Type'], 'application/json')
+        self.assertEqual(
+            resp.headers.get('Access-Control-Allow-Origin'), '*')
+        self.assertEqual(resp.status_code, 200)
+
+        data = json.loads(resp.data.decode(resp.charset))
+        self.assertEqual(len(data), 2)
+
+    def test_custom_headers_are_returned_by_request(self):
+        "Should return custom headers if specified by the handler"
+        resp = self.app.post(
+            '/v1/task/',
+            content_type='application/json',
+            data=json.dumps({'task': 'New Task!'}))
+        self.assertEqual(resp.status_code, 201)
+
+        self.assertEqual(
+            resp.headers['Content-Type'], 'application/json')
+        self.assertEqual(
+            resp.headers.get('Access-Control-Allow-Origin'), '*')
+        self.assertEqual(
+            resp.headers.get('X-Special-Header'), 'XXX')
+
+        self.assertEqual(len(self.tasks), 3)
 
 
 class LogicalAPINamingTestCase(unittest.TestCase):
