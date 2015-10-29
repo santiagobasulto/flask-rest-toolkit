@@ -1,3 +1,5 @@
+[![Code Climate](https://codeclimate.com/github/santiagobasulto/flask-rest-toolkit/badges/gpa.svg)](https://codeclimate.com/github/santiagobasulto/flask-rest-toolkit)
+
 **Work in progress. Everything is subject to changes**
 
 # Flask Rest Toolkit
