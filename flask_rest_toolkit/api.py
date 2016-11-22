@@ -42,10 +42,11 @@ class ViewHandler(object):
         return SERIALIZERS[serializer]()
 
     def build_response(self, output):
-        if isinstance(output, ResponseBase):
-            return output
-
         data, code, headers = unpack(output)
+
+        if isinstance(data, ResponseBase):
+            return data
+
         serializer = self._get_serializer()
 
         response = make_response(
