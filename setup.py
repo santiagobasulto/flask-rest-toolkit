@@ -24,9 +24,6 @@ if not all(VALUES.values()):
 
 
 version = VALUES['__version__']
-project_name = os.path.basename(os.path.dirname(os.path.realpath(__file__)))
-project_url = 'http://github.com/santiagobasulto/{project_name}'.format(
-    project_name=project_name)
 
 
 class PyTest(TestCommand):
@@ -42,35 +39,30 @@ class PyTest(TestCommand):
         self.test_suite = True
 
     def run_tests(self):
-        #import here, cause outside the eggs aren't loaded
-        import sys, pytest
+        # import here, cause outside the eggs aren't loaded
+        import sys
+        import pytest
         errno = pytest.main(self.pytest_args)
         sys.exit(errno)
+
+
+def read_requirements(file_name):
+    with open(file_name, 'r') as fp:
+        return [l.strip() for l in fp if l.strip() and not l.startswith('-r')]
+
 
 setup(
     name=VALUES['__title__'],
     version=version,
     description=VALUES['__description__'],
-    url=project_url,
-    download_url="{url}/tarball/{version}".format(
-        url=project_url, version=version),
+    url='https://github.com/santiagobasulto/slack-cli',
     author='Santiago Basulto',
-    author_email='santiago.basulto@gmail.com',
+    author_email='santiago@rmotr.com',
     license='MIT',
     packages=['flask_rest_toolkit'],
     maintainer='Santiago Basulto',
-    install_requires=[
-        'Flask==0.10.1'
-    ],
-    tests_require=[
-        'cov-core==1.15.0',
-        'coverage==3.7.1',
-        'py==1.4.30',
-        'pytest==2.7.2',
-        'pytest-cov==2.0.0',
-        'six==1.9.0',
-        'mock==1.0.1'
-    ],
+    install_requires=read_requirements('requirements.txt'),
+    tests_require=read_requirements('dev-requirements.txt'),
     zip_safe=True,
     cmdclass={'test': PyTest},
 )

@@ -187,6 +187,27 @@ In that case when a `UserEmailAlreadyExistsException` happens a 409 will be retu
 
 You can also work with hierarchies of exceptions. Please check tests for more details: `tests/errors.py`
 
-# Run tests
+# Contributions/Developing
 
-    $ python setup.py test
+You'll need to install the dev requirements: `pip install dev-requirements.txt`.
+
+## Run tests
+
+The easiest way is through the regular `setup.py` module:
+```bash
+$ python setup.py test
+```
+
+Internally we're using `py.test`:
+
+```bash
+$ py.test tests/
+```
+
+## Packaging and publishing
+
+```bash
+$ python setup.py sdist
+$ python setup.py bdist_wheel --universal
+$ twine upload dist/*
+```
