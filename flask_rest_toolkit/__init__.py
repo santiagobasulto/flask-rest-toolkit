@@ -1,5 +1,5 @@
 __title__ = 'flask-rest-toolkit'
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 __author__ = 'Santiago Basulto'
 __license__ = 'MIT'
 __description__ = ("A set of tools to create simple Flask REST "

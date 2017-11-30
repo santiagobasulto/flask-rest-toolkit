@@ -19,12 +19,12 @@ class ViewHandler(object):
         self.endpoint = endpoint
         self.api = api
 
-    def process_request(self, request):
+    def process_request(self, request, *args, **kwargs):
         try:
             for middleware_class in self.endpoint.middleware:
                 middleware = middleware_class()
                 method = getattr(middleware, 'process_request')
-                result = method(request)
+                result = method(request, *args, **kwargs)
                 if result:
                     return result
         except Exception as exc:
@@ -72,7 +72,7 @@ class ViewHandler(object):
         if self.endpoint.authentication:
             self.endpoint.authentication.authenticate(request)
 
-        output = self.process_request(request)
+        output = self.process_request(request, *args, **kwargs)
 
         if not output:
             request.api = self.api
